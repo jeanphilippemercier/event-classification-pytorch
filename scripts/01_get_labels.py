@@ -39,7 +39,9 @@ for event_type in event_types:
         status = 'accepted'
 
     response, events = sc.events_list(evaluation_mode='manual',
-                                           status=status, page_size=1000)
+                                      status=status,
+                                      event_type=event_type,
+                                      page_size=1000)
 
     for event in tqdm(events):
         labels = extract_labels(event.event_resource_id)
