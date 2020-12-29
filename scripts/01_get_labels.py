@@ -44,6 +44,11 @@ for event_type in event_types:
     for event in tqdm(events):
         labels = extract_labels(event.event_resource_id)
 
+        if not labels:
+            continue
+
+        events_list.append(event)
+
         for label in labels:
             labels_list.append(label)
 
