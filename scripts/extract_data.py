@@ -15,7 +15,7 @@ sc = SeismicClient(api_url, api_user, api_password)
 event_types = get_event_types(api_url, username=api_user,
                               password=api_password).keys()
 
-resp, res = sc.events_list(page_size=1000)
+resp, res = sc.events_list(page_size=1000, evaluation_mode='manual')
 
 outdir = Path(environ['DIR_SEISMIC_DATA'])
 
