@@ -2,7 +2,7 @@ from microquake.clients.api_client import SeismicClient, get_event_types
 from microquake.core.settings import settings
 from loguru import logger
 from time import time
-from os import path
+from os import path, environ
 from pathlib import Path
 import pickle
 
@@ -17,12 +17,12 @@ event_types = get_event_types(api_url, username=api_user,
 
 resp, res = sc.events_list(page_size=1000)
 
-outdir = Path('/mnt/disks/data')
+outdir = Path(environ['DIR_SEISMIC_DATA'])
 
 outdir_type = outdir  # / 'seismic event' 
 outdir_type.mkdir(mode=555, parents=True, exist_ok=True)
 
-pickle.dump(res, open('/mnt/disks/data/catalogue.pickle', 'wb'))
+pickle.dump(res, open(outdir / 'catalogue.pickle', 'wb'))
  
 
 for i, re in enumerate(res):
