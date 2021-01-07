@@ -23,7 +23,7 @@ result, res = sc.events_list(evaluation_mode='manual',
                              page_size=100)
 
 logger.info('writing the event list')
-pickle.dump(res, open(data_directory, 'wb'))
+pickle.dump(res, open(data_directory / 'event_list.pickle', 'wb'))
 
 outdir = Path(datadir)
 
