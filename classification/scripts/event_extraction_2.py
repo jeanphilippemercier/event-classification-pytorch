@@ -4,6 +4,13 @@ from loguru import logger
 from time import time
 from os import path
 from pathlib import Path
+from ..gcp.request_event import request_event
+
+import sys
+pkg_dir = Path().cwd().parent
+sys.path.insert(1, pkg_dir)
+
+from google.cloud import storage
 
 api_user = settings.get('api_user')
 api_password = settings.get('api_password')
@@ -28,12 +35,14 @@ outdir_type.mkdir(mode=555, parents=True, exist_ok=True)
  
 
 for i, re in enumerate(res):
+    re_gcp =
     try:
-        rid = re.event_resource_id.replace('/','_')[10:]
-        if rid[-2:] == '.e':
-            rid = rid[:-2]
-        filename = outdir_type / f'{rid}.xml'
-        t0 = time()
+        blob_name = re.event_file.split('/')[0]
+        # rid = re.event_resource_id.replace('/','_')[10:]
+        # if rid[-2:] == '.e':
+        #     rid = rid[:-2]
+        # filename = outdir_type / f'{rid}.xml'
+        # t0 = time()
         logger.info(f'processing event:{re.event_resource_id} ({i+1}/{len(res)} '
                     f'-- {(i+1) / len(res) * 100:0.0f}%)')
 

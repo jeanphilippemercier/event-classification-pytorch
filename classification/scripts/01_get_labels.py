@@ -44,6 +44,9 @@ for event_type in event_types:
                                       page_size=1000)
 
     for event in tqdm(events):
+        if not hasattr(event, 'trace_labels'):
+            continue
+
         labels = extract_labels(event.event_resource_id)
 
         if not labels:
