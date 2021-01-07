@@ -11,7 +11,7 @@ api_user = settings.get('api_user')
 api_password = settings.get('api_password')
 api_url = settings.get('api_base_url')
 
-data_directory = os.environ['SEISMICDATADIR']
+data_directory = Path(os.environ['SEISMICDATADIR'])
 
 sc = SeismicClient(api_url, api_user, api_password)
 
