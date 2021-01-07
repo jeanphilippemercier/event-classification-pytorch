@@ -28,8 +28,8 @@ pickle.dump(res, open(data_directory /
                       'auomatic_rejected_event_list.pickle', 'wb'))
 
 for i, re in enumerate(res):
-        re_gcp = RequestEventGCP(re)
-        re_gcp.write_data_to_bucket('ot-automatic-rejected')
+    re_gcp = RequestEventGCP(re)
+    re_gcp.write_data_to_bucket('ot-automatic-rejected')
 
 
 

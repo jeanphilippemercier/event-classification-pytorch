@@ -5,6 +5,7 @@ import json
 from tqdm import tqdm
 from loguru import logger
 import pickle
+from pathlib import Path
 
 api_base_url = settings.API_BASE_URL
 username = settings.API_USER
@@ -59,8 +60,10 @@ for event_type in event_types:
 
 # converting list of dictionary to dictionary of list
 
-pickle.dump(events_list, open('events_list.pickle', 'wb'))
-pickle.dump(labels_list, open('labels_list.pickle', 'wb'))
+data_directory = Path(os.environ['SEISMICDATADIR'])
+
+pickle.dump(events_list, open(data_directory / 'events_list.pickle', 'wb'))
+pickle.dump(labels_list, open(data_directory / 'labels_list.pickle', 'wb'))
 
 # labels_list = {k: [dic[k] for dic in labels_list] for k in labels_list[0]}
 # events_list = {k: [dic[k] for dic in events_list] for k in events_list[0]}
