@@ -15,8 +15,8 @@ event_types = get_event_types(api_url, username=api_user,
                               password=api_password).keys()
 
 
-res, res = sc.events_list(evaluation_mode='manual', 
-                          page_size=1000)
+result, res = sc.events_list(evaluation_mode='manual', 
+                             page_size=100)
 
 bubu
 datadir = os.environ['SEISMICDATADIR']
