@@ -24,7 +24,8 @@ result, res = sc.events_list(evaluation_mode='automatic',
                              page_size=100)
 
 logger.info('writing the event list')
-pickle.dump(res, open(data_directory / 'event_list.pickle', 'wb'))
+pickle.dump(res, open(data_directory /
+                      'auomatic_rejected_event_list.pickle', 'wb'))
 
 for i, re in enumerate(res):
         re_gcp = RequestEventGCP(re)
