@@ -15,8 +15,8 @@ credentials_file = home / '.gcp/uQuake-event-classification-81c15bfe858a.json'
 
 
 class RequestEventGCP(RequestEvent):
-    def __init__(self, request_event, credentials_json, bucket=None):
-        self.credentials_json = credentials_json
+    def __init__(self, request_event):
+        self.credentials_json = credentials_file
         self.api_base_url
         super().__init__(request_event.__dict__)
 
@@ -34,6 +34,13 @@ class RequestEventGCP(RequestEvent):
                 continue
             logger.info(f'writing {blob_base_name + extension} to the bucket')
             file_url = file_base_url + extension
-            file_obj = BytesIO(requests.get(file_url).content)
+            try:
+                file_obj = BytesIO(requests.get(file_url).content)
+            except Exception as e:
+                logger.error(e)
 
-            blob.upload_from_file(file_obj)
+            try:
+                blob.upload_from_file(file_obj)
+            except Exception as e:
+                logger.error(e)
+
