@@ -25,12 +25,6 @@ result, res = sc.events_list(evaluation_mode='manual',
 logger.info('writing the event list')
 pickle.dump(res, open(data_directory / 'event_list.pickle', 'wb'))
 
-outdir = Path(datadir)
-
-outdir_type = outdir  # / 'seismic event' 
-outdir_type.mkdir(mode=555, parents=True, exist_ok=True)
- 
-
 for i, re in enumerate(res):
         re_gcp = RequestEventGCP(re, )
         re_gcp.write_data_to_bucket('seismic-data')

@@ -17,7 +17,6 @@ credentials_file = home / '.gcp/uQuake-event-classification-81c15bfe858a.json'
 class RequestEventGCP(RequestEvent):
     def __init__(self, request_event):
         self.credentials_json = credentials_file
-        self.api_base_url
         super().__init__(request_event.__dict__)
 
     def write_data_to_bucket(self, bucket_name):
