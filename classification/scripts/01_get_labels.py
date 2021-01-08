@@ -6,6 +6,7 @@ from tqdm import tqdm
 from loguru import logger
 import pickle
 from pathlib import Path
+import os
 
 api_base_url = settings.API_BASE_URL
 username = settings.API_USER
@@ -57,6 +58,7 @@ for event_type in event_types:
 
         for label in labels:
             labels_list.append(label)
+            logger.info(len(labels_list))
 
 # converting list of dictionary to dictionary of list
 
