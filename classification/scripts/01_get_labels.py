@@ -71,7 +71,6 @@ for event_type in event_types:
 
         for lbl in labels:
             labels_list.append(lbl)
-            logger.info(len(labels_list))
 
 # converting list of dictionary to dictionary of list
 
