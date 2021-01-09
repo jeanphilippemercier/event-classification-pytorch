@@ -20,20 +20,27 @@ event_types = list(tmp.keys())
 
 
 def extract_labels(event_resource_id):
+    sensors_list = []
+    labels_list = []
+
     encoded_resource_id = api_client.encode(event_resource_id)
     request_url = f'{api_base_url}events/' \
         f'{encoded_resource_id}/trace_labels'
     response = requests.get(request_url)
-    return json.loads(response.content)
+    labels = json.loads(response.content)
+    for label in labels:
+        if label['sensor'] is None:
+            continue
 
+        sensors_list.append(label['sensor']['code'])
+        labels_list.append(label['label']['name'])
 
-out_dict={'event_id': [],
-          'sensor_id': [],
-          'label_id': [],
-          'label': []}
+    return sensors_list, labels_list
+
 
 events_list = []
 labels_list = []
+labels_dict_out = {'event_resource_id': [], 'sensor': [], 'label': []}
 for event_type in event_types:
     logger.info(f'processing {event_type}')
     status = 'rejected'
@@ -49,15 +56,21 @@ for event_type in event_types:
         if not hasattr(event, 'trace_labels'):
             continue
 
-        labels = extract_labels(event.event_resource_id)
+        sensors, labels = extract_labels(event.event_resource_id)
 
         if not labels:
             continue
 
+        for sensor, label in zip(sensors, labels):
+            labels_dict_out['sensor'].append(sensor)
+            labels_dict_out['label'].append(label)
+            labels_dict_out['event_resource_id'].append(
+                event.event_resource_id)
+
         events_list.append(event)
 
-        for label in labels:
-            labels_list.append(label)
+        for lbl in labels:
+            labels_list.append(lbl)
             logger.info(len(labels_list))
 
 # converting list of dictionary to dictionary of list
