@@ -84,7 +84,7 @@ class RequestEventGCP(RequestEvent):
                     logger.warning(f'no waveform for event '
                                    f'{self.event_resource_id}')
                     return
-                self.write_data_to_bucket(force=True)
+                # self.write_data_to_bucket(force=True)
             except Exception as e:
                 logger.error(e)
                 return
