@@ -1,22 +1,12 @@
+from loguru import logger
 from librosa.feature import melspectrogram
 from librosa import amplitude_to_db
-from microquake.core import read
 from loguru import logger
-import pickle
 import numpy as np
 from PIL import Image
 
-events = pickle.load(
-    open('/home/jpmercier01/data/seismic_data/events_list.pickle', 'rb'))
-labels = pickle.load(
-    open('/home/jpmercier01/data/seismic_data/labels_list.pickle', 'rb'))
 
-
-
-# st = st.resample(2000)
-# st = st.filter('bandpass', freqmin=10, freqmax=1000)
-
-def librosa_spectrogram(tr, max_frequency=1000, height=256, width=256):
+def librosa_spectrogram(tr, height=256, width=256):
     """
         Using Librosa mel-spectrogram to obtain the spectrogram
         :param tr: stream trace
@@ -36,7 +26,8 @@ def librosa_spectrogram(tr, max_frequency=1000, height=256, width=256):
     start = (img.shape[1] - width) // 2
     print(start)
 
-    return img[: , start:start + width]
+    spectrogram = img[: , start:start + width]
+    return Image.fromarray(np.uint8(spectrogram), 'L')
 
 
 #############################################

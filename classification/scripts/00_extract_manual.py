@@ -26,8 +26,9 @@ logger.info('writing the event list')
 pickle.dump(res, open(data_directory / 'event_list.pickle', 'wb'))
 
 for i, re in enumerate(res):
-    re_gcp = RequestEventGCP(re)
-    re_gcp.write_data_to_bucket('seismic-data')
+    re_gcp = RequestEventGCP(re, 'seismic-data',
+                             'event-classification-mel-spectrograms')
+    re_gcp.write_data_to_bucket()
 
 
 

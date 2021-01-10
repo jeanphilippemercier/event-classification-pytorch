@@ -7,6 +7,7 @@ from loguru import logger
 import pickle
 from pathlib import Path
 import os
+import pandas as pd
 
 api_base_url = settings.API_BASE_URL
 username = settings.API_USER
@@ -76,8 +77,23 @@ for event_type in event_types:
 
 data_directory = Path(os.environ['SEISMICDATADIR'])
 
+events_dict = {}
+for key in events_list[0].keys():
+    events_dict[key] = []
+for event in events_list:
+    for key in events_list[0].keys():
+        events_dict[key].append(event.__dict__[key])
+df_event = pd.DataFrame(events_dict)
+df_label = pd.DataFrame(labels_dict_out)
+
 pickle.dump(events_list, open(data_directory / 'events_list.pickle', 'wb'))
 pickle.dump(labels_list, open(data_directory / 'labels_list.pickle', 'wb'))
+
+# pickle.dump(df_event, open(data_directory / 'events_dataframe.pickle', 'wb'))
+# pickle.dump(df_event, open(data_directory / 'labels.'))
+
+df_event.to_csv(data_directory / 'events.csv')
+df_label.to_csv(data_directory / 'labels.csv')
 
 # labels_list = {k: [dic[k] for dic in labels_list] for k in labels_list[0]}
 # events_list = {k: [dic[k] for dic in events_list] for k in events_list[0]}

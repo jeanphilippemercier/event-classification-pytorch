@@ -6,8 +6,8 @@ from os import path, environ
 from pathlib import Path
 import pickle
 
-api_user = 'test'
-api_password = 'test@seismic'
+# api_user = 'test'
+# api_password = 'test@seismic'
 api_url = settings.get('api_base_url')
 
 sc = SeismicClient(api_url, api_user, api_password)
