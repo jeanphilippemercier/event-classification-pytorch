@@ -59,7 +59,7 @@ class RequestEventGCP(RequestEvent):
 
     def delete_spectrograms(self):
         blobs = self.storage_client.list_blobs(self.spectrogram_bucket)
-        for blob in blobs:
+        for blob in tqdm(blobs):
             blob.delete()
 
     def write_spectrogram_to_bucket(self, label_dict):
