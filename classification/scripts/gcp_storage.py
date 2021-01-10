@@ -74,8 +74,11 @@ class RequestEventGCP(RequestEvent):
             logger.error('The bucket where to store the spectrogram needs '
                           'to be specified')
             return
+        try:
+            st = self.get_waveform_from_bucket()
+        except Exception as e:
+            logger.error(e)
 
-        st = self.get_waveform_from_bucket()
         if not st:
             logger.warning(f'no waveform for event '
                            f'{self.event_resource_id}')
@@ -112,7 +115,8 @@ class RequestEventGCP(RequestEvent):
                 spec_file_obj.seek(0)
 
                 blob = self.spectrogram_bucket.blob(spec_name)
-                # if blob.exists():
+                if blob.exists():
+                    continue
                 #     blob.delete()
 
                 blob.upload_from_file(spec_file_obj)
