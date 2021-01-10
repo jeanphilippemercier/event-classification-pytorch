@@ -78,8 +78,9 @@ class RequestEventGCP(RequestEvent):
         st = st.resample(sampling_rate=self.spectrogram_sampling_rate)
         spec_names = []
         labels = []
-        for sensor, label in tqdm(zip(label_dict['sensor'],
-                                      label_dict['label'])):
+        for i in tqdm(range(len(sensors))):
+            sensor = label_dict['sensor'][i]
+            label = label_dict['label'][i]
             for tr in st.select(station=str(sensor)):
                 spec = librosa_spectrogram(tr.copy(),
                                            height=self.spectrogram_height,
