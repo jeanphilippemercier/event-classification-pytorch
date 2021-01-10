@@ -87,9 +87,13 @@ class RequestEventGCP(RequestEvent):
             sensor = label_dict['sensor'].iloc[i]
             label = label_dict['label'].iloc[i]
             for tr in st.select(station=str(sensor)):
-                spec = librosa_spectrogram(tr.copy(),
-                                           height=self.spectrogram_height,
-                                           width=self.spectrogram_width)
+                try:
+                    spec = librosa_spectrogram(tr.copy(),
+                                               height=self.spectrogram_height,
+                                               width=self.spectrogram_width)
+                except Exception as e:
+                    logger.error(e)
+                    continue
 
                 # spec_file_obj = BytesIO(spec.tobytes())
                 spec_file_obj = BytesIO()
