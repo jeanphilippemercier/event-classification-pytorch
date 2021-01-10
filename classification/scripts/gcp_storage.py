@@ -109,8 +109,6 @@ class RequestEventGCP(RequestEvent):
                 spec_names.append(spec_name)
                 labels.append(label)
 
-                spec_file_obj.seek(0)
-
                 blob = self.spectrogram_bucket.blob(spec_name)
                 if blob.exists():
                     continue
@@ -125,9 +123,8 @@ class RequestEventGCP(RequestEvent):
 
                 # spec_file_obj = BytesIO(spec.tobytes())
                 spec_file_obj = BytesIO()
+                spec_file_obj.seek(0)
                 spec.save(spec_file_obj, 'png')
-
-
 
                 blob.upload_from_file(spec_file_obj)
 
