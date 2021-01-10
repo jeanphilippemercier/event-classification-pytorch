@@ -95,6 +95,9 @@ class RequestEventGCP(RequestEvent):
                 labels.append(label)
 
                 blob = self.spectrogram_bucket.blob(spec_name)
+                if blob.exists():
+                    blob.delete()
+
                 blob.upload_from_file(spec_file_obj)
 
         return spec_names, labels
