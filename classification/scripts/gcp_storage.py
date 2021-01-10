@@ -94,6 +94,8 @@ class RequestEventGCP(RequestEvent):
                 spec_names.append(spec_name)
                 labels.append(label)
 
+                spec_file_obj.seek(0)
+
                 blob = self.spectrogram_bucket.blob(spec_name)
                 if blob.exists():
                     blob.delete()
