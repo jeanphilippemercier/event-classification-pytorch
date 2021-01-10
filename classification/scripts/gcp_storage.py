@@ -35,14 +35,14 @@ class RequestEventGCP(RequestEvent):
         self.spectrogram_width=spectrogram_width
         self.spectrogram_sampling_rate = spectrogram_sampling_rate
 
-    def write_data_to_bucket(self):
+    def write_data_to_bucket(self, force=False):
         bucket = self.storage_client.bucket(self.seismic_data_bucket)
         file_base_url = self.event_file[:-4]
         for extension in ['.xml', '.mseed', '.context_mseed',
                           '.variable_mseed']:
             blob = self.seismic_data_bucket.blob(self.blob_base_name +
                                                  extension)
-            if blob.exists():
+            if (blob.exists()) & (not force):
                 logger.info(f'blob {blob} already exist ... skipping!')
                 continue
             logger.info(f'writing {self.blob_base_name + extension} to the bucket')
@@ -78,7 +78,15 @@ class RequestEventGCP(RequestEvent):
             st = self.get_waveform_from_bucket()
         except Exception as e:
             logger.error(e)
-            return
+            try:
+                st = self.get_waveform()
+                if not st:
+                    logger.warning(f'no waveform for event '
+                                   f'{self.event_resource_id}')
+                    return
+                self.write_data_to_bucket(force=True)
+            except Exception as e:
+                logger.error(e)
 
         if not st:
             logger.warning(f'no waveform for event '
