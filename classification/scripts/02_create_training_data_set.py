@@ -3,6 +3,7 @@ import pandas as pd
 import os
 from pathlib import Path
 from gcp_storage import RequestEventGCP
+from tqdm import tqdm
 
 data_directory = Path(os.environ['SEISMICDATADIR'])
 
@@ -17,7 +18,7 @@ seismic_data_bucket = 'seismic-data'
 spectrogram_bucket = 'event-classification-mel-spectrograms'
 
 with open(data_directory / 'training_input.csv', 'w') as training_file:
-    for event in events:
+    for event in tqdm(events):
         event_gcp = RequestEventGCP(event,
                                     seismic_data_bucket,
                                     spectrogram_bucket)

@@ -83,7 +83,9 @@ class RequestEventGCP(RequestEvent):
                                            height=self.spectrogram_height,
                                            width=self.spectrogram_width)
 
-                spec_file_obj = BytesIO(spec.tobytes())
+                # spec_file_obj = BytesIO(spec.tobytes())
+                spec_file_obj = BytesIO()
+                spec.save(spec_file_obj, 'png')
 
                 channel = tr.stats.channel
 
