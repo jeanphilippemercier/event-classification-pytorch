@@ -8,7 +8,7 @@ from loguru import logger
 from microquake.clients.api_client import RequestEvent
 from microquake.core import read
 from spectrogram import librosa_spectrogram
-import tqdm
+from tqdm import tqdm
 
 
 home = Path(os.environ['HOME'])
