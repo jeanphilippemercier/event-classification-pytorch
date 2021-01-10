@@ -17,6 +17,8 @@ df_labels = pd.read_csv(data_directory / 'labels.csv')
 seismic_data_bucket = 'seismic-data'
 spectrogram_bucket = 'event-classification-mel-spectrograms'
 
+event_gcp = RequestEventGCP(events[0], seismic_data_bucket, spectrogram_bucket)
+
 with open(data_directory / 'training_input.csv', 'w') as training_file:
     for event in tqdm(events):
         event_gcp = RequestEventGCP(event,

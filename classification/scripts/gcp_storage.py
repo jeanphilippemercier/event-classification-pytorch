@@ -57,6 +57,11 @@ class RequestEventGCP(RequestEvent):
             except Exception as e:
                 logger.error(e)
 
+    def delete_spectrograms(self):
+        blobs = self.storage_client.list_blobs(self.spectrogram_bucket)
+        for blob in blobs:
+            blob.delete()
+
     def write_spectrogram_to_bucket(self, label_dict):
         """
         create a spectrogram
@@ -92,7 +97,8 @@ class RequestEventGCP(RequestEvent):
 
                 channel = tr.stats.channel
 
-                spec_name = f'{self.blob_base_name}_{sensor}_{channel}.png'
+                spec_name = f'{self.blob_base_name}_{label}_' \
+                    f'{sensor}_{channel}.png'
 
                 spec_names.append(spec_name)
                 labels.append(label)
