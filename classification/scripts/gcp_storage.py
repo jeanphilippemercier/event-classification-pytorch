@@ -78,7 +78,7 @@ class RequestEventGCP(RequestEvent):
         st = st.resample(sampling_rate=self.spectrogram_sampling_rate)
         spec_names = []
         labels = []
-        for i in tqdm(range(len(sensors))):
+        for i in tqdm(range(len(label_dict['sensor']))):
             sensor = label_dict['sensor'][i]
             label = label_dict['label'][i]
             for tr in st.select(station=str(sensor)):
