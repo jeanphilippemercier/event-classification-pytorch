@@ -79,8 +79,8 @@ class RequestEventGCP(RequestEvent):
         spec_names = []
         labels = []
         for i in tqdm(range(len(label_dict['sensor']))):
-            sensor = label_dict['sensor'][i]
-            label = label_dict['label'][i]
+            sensor = label_dict['sensor'].iloc[i]
+            label = label_dict['label'].iloc[i]
             for tr in st.select(station=str(sensor)):
                 spec = librosa_spectrogram(tr.copy(),
                                            height=self.spectrogram_height,
