@@ -14,6 +14,12 @@ labels = pickle.load(
 
 df_labels = pd.read_csv(data_directory / 'labels.csv')
 
+df_labels['label'] = df_labels['label'].replace('resonant/spurious noise',
+                                                'structured noise')
+
+df_labels['label'] = df_labels['label'].replace('noise',
+                                                'unstructured noise')
+
 seismic_data_bucket = 'seismic-data'
 spectrogram_bucket = 'event-classification-mel-spectrograms'
 
