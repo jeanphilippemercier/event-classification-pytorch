@@ -24,7 +24,6 @@ def librosa_spectrogram(tr, height=256, width=256):
                           hop_length=int(hl))
     img = amplitude_to_db(spec)
     start = (img.shape[1] - width) // 2
-    print(start)
 
     spectrogram = img[: , start:start + width]
     return Image.fromarray(np.uint8(spectrogram), 'L')

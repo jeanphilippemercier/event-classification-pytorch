@@ -7,7 +7,7 @@ from io import BytesIO
 from loguru import logger
 from microquake.clients.api_client import RequestEvent
 from microquake.core import read
-from spectrogram import librosa_spectrogram(tr,  height=256, width=256):
+from spectrogram import librosa_spectrogram
 
 
 home = Path(os.environ['HOME'])
@@ -34,7 +34,6 @@ class RequestEventGCP(RequestEvent):
         self.spectrogram_width=spectrogram_width
         self.spectrogram_sampling_rate = spectrogram_sampling_rate
 
-
     def write_data_to_bucket(self):
         bucket = self.storage_client.bucket(self.seismic_data_bucket)
         file_base_url = self.event_file[:-4]
@@ -57,25 +56,48 @@ class RequestEventGCP(RequestEvent):
             except Exception as e:
                 logger.error(e)
 
-    def write_spectrogram_to_bucket(self, ):
+    def write_spectrogram_to_bucket(self, label_dict):
+        """
+        create a spectrogram
+        :param label_dict: A label dictionary, containing two keys <sensor>
+        and <label>. The dictionary should contain a list of sensors and a list
+        of labels
+        :return:
+        """
         if self.spectrogram_bucket is None:
             logger.error('The bucket where to store the spectrogram needs '
                           'to be specified')
+            return
 
-            st = self.get_waveform_from_bucket()
-            if not st:
-                logger.warning(f'no waveform for event '
-                               f'{self.event_resource_id}')
-                return
-            st = st.resample(sampling_rate=self.spectrogram_sampling_rate)
+        st = self.get_waveform_from_bucket()
+        if not st:
+            logger.warning(f'no waveform for event '
+                           f'{self.event_resource_id}')
+            return
+        st = st.resample(sampling_rate=self.spectrogram_sampling_rate)
+        spec_names = []
+        labels = []
+        for sensor, label in zip(label_dict['sensor'], label_dict['label']):
+            for tr in st.select(station=sensor):
+                spec = librosa_spectrogram(tr.copy(),
+                                           height=self.spectrogram_height,
+                                           width=self.spectrogram_width)
 
+                spec_file_obj = BytesIO(spec.tobytes())
 
-    def create_spectrogram(self, tr):
+                channel = tr.stats.channel
 
-        st_blob = input_bucket.blob(self.blob_base_name + '.mseed')
+                spec_name = f'{self.blob_base_name}_{sensor}_{channel}.png'
 
+                spec_names.append(spec_name)
+                labels.append(label)
 
-    def load_waveform_from_bucket(self):
+                blob = self.spectrogram_bucket.blob(spec_name)
+                blob.upload_from_file(spec_file_obj)
+
+        return spec_names, labels
+
+    def get_waveform_from_bucket(self):
 
         blob = self.seismic_data_bucket.blob(self.blob_base_name + '.mseed')
         if not blob.exists():
@@ -83,7 +105,8 @@ class RequestEventGCP(RequestEvent):
                            f'in bucket {self.seismic_data_bucket}')
             return
 
-        self.st = read(BytesIO(blob.download_as_bytes()))
+        st = read(BytesIO(blob.download_as_bytes()))
+        return st
 
 
 
