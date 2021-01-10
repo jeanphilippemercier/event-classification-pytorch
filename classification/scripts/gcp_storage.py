@@ -8,6 +8,7 @@ from loguru import logger
 from microquake.clients.api_client import RequestEvent
 from microquake.core import read
 from spectrogram import librosa_spectrogram
+import tqdm
 
 
 home = Path(os.environ['HOME'])
@@ -77,7 +78,8 @@ class RequestEventGCP(RequestEvent):
         st = st.resample(sampling_rate=self.spectrogram_sampling_rate)
         spec_names = []
         labels = []
-        for sensor, label in zip(label_dict['sensor'], label_dict['label']):
+        for sensor, label in tqdm(zip(label_dict['sensor'],
+                                      label_dict['label'])):
             for tr in st.select(station=str(sensor)):
                 spec = librosa_spectrogram(tr.copy(),
                                            height=self.spectrogram_height,
@@ -97,8 +99,8 @@ class RequestEventGCP(RequestEvent):
                 spec_file_obj.seek(0)
 
                 blob = self.spectrogram_bucket.blob(spec_name)
-                if blob.exists():
-                    blob.delete()
+                # if blob.exists():
+                #     blob.delete()
 
                 blob.upload_from_file(spec_file_obj)
 
