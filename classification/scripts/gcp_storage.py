@@ -78,6 +78,7 @@ class RequestEventGCP(RequestEvent):
             st = self.get_waveform_from_bucket()
         except Exception as e:
             logger.error(e)
+            return
 
         if not st:
             logger.warning(f'no waveform for event '
