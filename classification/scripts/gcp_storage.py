@@ -97,9 +97,10 @@ class RequestEventGCP(RequestEvent):
 
                 channel = tr.stats.channel
 
-                spec_name = f'{self.blob_base_name}_' \
-                            f'{label.replace("/", "_")}_' \
-                            f'{sensor}_{channel}.png'
+                label.replace('/', '_').replace(' ', '_')
+
+                spec_name = f'{label}/{self.blob_base_name}_' \
+                            f'{label}_{sensor}_{channel}.png'
 
                 spec_names.append(spec_name)
                 labels.append(label)
