@@ -99,6 +99,22 @@ class RequestEventGCP(RequestEvent):
             sensor = label_dict['sensor'].iloc[i]
             label = label_dict['label'].iloc[i]
             for tr in st.select(station=str(sensor)):
+                channel = tr.stats.channel
+
+                label.replace('/', '_').replace(' ', '_')
+
+                spec_name = f'{label}/{self.blob_base_name}_' \
+                    f'{label}_{sensor}_{channel}.png'
+
+                spec_names.append(spec_name)
+                labels.append(label)
+
+                spec_file_obj.seek(0)
+
+                blob = self.spectrogram_bucket.blob(spec_name)
+                if blob.exists():
+                    continue
+                    # blob.delete()
                 try:
                     spec = librosa_spectrogram(tr.copy(),
                                                height=self.spectrogram_height,
@@ -111,22 +127,7 @@ class RequestEventGCP(RequestEvent):
                 spec_file_obj = BytesIO()
                 spec.save(spec_file_obj, 'png')
 
-                channel = tr.stats.channel
 
-                label.replace('/', '_').replace(' ', '_')
-
-                spec_name = f'{label}/{self.blob_base_name}_' \
-                            f'{label}_{sensor}_{channel}.png'
-
-                spec_names.append(spec_name)
-                labels.append(label)
-
-                spec_file_obj.seek(0)
-
-                blob = self.spectrogram_bucket.blob(spec_name)
-                # if blob.exists():
-                #     continue
-                #     blob.delete()
 
                 blob.upload_from_file(spec_file_obj)
 
