@@ -124,8 +124,8 @@ class RequestEventGCP(RequestEvent):
                 spec_file_obj.seek(0)
 
                 blob = self.spectrogram_bucket.blob(spec_name)
-                if blob.exists():
-                    continue
+                # if blob.exists():
+                #     continue
                 #     blob.delete()
 
                 blob.upload_from_file(spec_file_obj)
