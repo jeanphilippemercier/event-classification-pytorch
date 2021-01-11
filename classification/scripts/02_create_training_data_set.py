@@ -22,7 +22,8 @@ df_labels['label'] = df_labels['label'].replace('noise',
                                                 'unstructured noise')
 
 seismic_data_bucket = 'seismic-data'
-spectrogram_bucket = 'event-classification-mel-spectrograms'
+spectrogram_bucket = 'ot-auto-ml'
+# spectrogram_bucket = 'event-classification-mel-spectrograms'
 
 # event_gcp = RequestEventGCP(events[0], seismic_data_bucket, spectrogram_bucket)
 
