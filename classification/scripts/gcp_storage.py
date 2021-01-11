@@ -112,9 +112,9 @@ class RequestEventGCP(RequestEvent):
                 labels.append(label)
 
                 blob = self.spectrogram_bucket.blob(spec_name)
-                # if blob.exists():
-                #     continue
-                    # blob.delete()
+                if blob.exists():
+                    continue
+            
                 try:
                     spec = librosa_spectrogram(tr.copy(),
                                                height=self.spectrogram_height,
@@ -125,9 +125,9 @@ class RequestEventGCP(RequestEvent):
 
                 # spec_file_obj = BytesIO(spec.tobytes())
                 spec_file_obj = BytesIO()
-                spec_file_obj.seek(0)
                 spec.save(spec_file_obj, 'png')
 
+                spec_file_obj.seek(0)
                 blob.upload_from_file(spec_file_obj)
 
         return spec_names, labels
