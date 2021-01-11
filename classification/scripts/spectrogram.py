@@ -14,19 +14,27 @@ def librosa_spectrogram(tr, height=256, width=256):
         :param width: image width
         :return: numpy array of spectrogram with height and width dimension
     """
-    data = get_norm_trace(tr)
-    signal = data * 255
+    # data = get_norm_trace(tr)
+    data = tr.normalize().data
+    signal = data
     # signal = tr.data
     hl = int(signal.shape[0] // (width * 1.1))  # this will cut away 5% from
     # start and end
     # height_2 = height * tr.stats.sampling_rate // max_frequency
     spec = melspectrogram(signal, n_mels=height,
                           hop_length=int(hl))
-    img = amplitude_to_db(spec)
+
+    # spec = spec / np.max(spec)
+    spec = amplitude_to_db(spec)
+    # resolution = 255
+    # spec = np.log(spec + np.max(spec)/ resolution)
+    spec = spec / np.max(spec) * 255
+    spec[spec < 0] = 0
+    img = spec
     start = (img.shape[1] - width) // 2
 
     spectrogram = img[: , start:start + width]
-    return Image.fromarray(np.uint8(spectrogram), 'L')
+    return spec, Image.fromarray(np.uint8(spectrogram), 'L')
 
 
 #############################################

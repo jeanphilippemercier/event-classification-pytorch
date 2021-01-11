@@ -106,7 +106,9 @@ class RequestEventGCP(RequestEvent):
                 label.replace('/', '_').replace(' ', '_')
 
                 spec_name = f'{label}/{self.blob_base_name}_' \
-                    f'{label}_{sensor}_{channel}.png'
+                    f'{label}_{sensor}_{channel}_' \
+                    f'{self.spectrogram_height}_' \
+                    f'{self.spectrogram_width}.png'
 
                 spec_names.append(spec_name)
                 labels.append(label)
