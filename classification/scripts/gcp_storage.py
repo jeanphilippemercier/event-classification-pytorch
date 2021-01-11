@@ -112,9 +112,9 @@ class RequestEventGCP(RequestEvent):
                 labels.append(label)
 
                 blob = self.spectrogram_bucket.blob(spec_name)
-                if blob.exists():
-                    continue
-            
+                # if blob.exists():
+                #     continue
+
                 try:
                     spec = librosa_spectrogram(tr.copy(),
                                                height=self.spectrogram_height,
