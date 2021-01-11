@@ -32,11 +32,11 @@ with open(data_directory / 'training_input.csv', 'w') as training_file:
                                     spectrogram_bucket)
         labels_dict = df_labels[df_labels['event_resource_id'] ==
                                 event_gcp.event_resource_id]
-        try:
-            file_names, spec_labels = event_gcp.write_spectrogram_to_bucket(
-                labels_dict)
-        except Exception as e:
-            continue
+        # try:
+        file_names, spec_labels = event_gcp.write_spectrogram_to_bucket(
+            labels_dict)
+        # except Exception as e:
+        #     continue
 
         for file_name, spec_label in zip(file_names, spec_labels):
             training_file.write(f'{file_name}, {spec_label}\n')
