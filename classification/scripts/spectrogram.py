@@ -6,7 +6,8 @@ import numpy as np
 from PIL import Image
 
 
-def librosa_spectrogram(tr, height=256, width=256, return_data=False):
+def librosa_spectrogram(tr, height=256, width=256, return_data=False,
+                        db_scale=True):
     """
         Using Librosa mel-spectrogram to obtain the spectrogram
         :param tr: stream trace
@@ -25,11 +26,12 @@ def librosa_spectrogram(tr, height=256, width=256, return_data=False):
                           hop_length=int(hl))
 
     # spec = spec / np.max(spec)
-    spec = amplitude_to_db(spec)
+    if db_scale:
+        spec = amplitude_to_db(spec)
+        spec[spec < 0] = 0
     # resolution = 255
     # spec = np.log(spec + np.max(spec)/ resolution)
     spec = spec / np.max(spec) * 255
-    spec[spec < 0] = 0
     img = spec
     start = (img.shape[1] - width) // 2
 

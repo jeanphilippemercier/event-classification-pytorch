@@ -22,7 +22,7 @@ df_labels['label'] = df_labels['label'].replace('noise',
                                                 'unstructured noise')
 
 seismic_data_bucket = 'seismic-data'
-spectrogram_bucket = 'ot-auto-ml'
+spectrogram_bucket = 'spectrogram-auto-ml-ot'
 # spectrogram_bucket = 'event-classification-mel-spectrograms'
 
 # event_gcp = RequestEventGCP(events[0], seismic_data_bucket, spectrogram_bucket)
@@ -38,7 +38,7 @@ with open(data_directory / 'training_input_256_256.csv', 'w') as training_file:
                                 event_gcp.event_resource_id]
         try:
             file_names, spec_labels = event_gcp.write_spectrogram_to_bucket(
-                labels_dict)
+                labels_dict, db_scale=True)
         except Exception as e:
             logger.error(e)
             continue
@@ -57,13 +57,35 @@ with open(data_directory / 'training_input_128_128.csv', 'w') as training_file:
                                 event_gcp.event_resource_id]
         try:
             file_names, spec_labels = event_gcp.write_spectrogram_to_bucket(
-                labels_dict)
+                labels_dict, db_scale=True)
         except Exception as e:
             logger.error(e)
             continue
 
         for file_name, spec_label in zip(file_names, spec_labels):
-            training_file.write(f'{file_name}, {spec_label}\n')
+            training_file.write(f'gs://{spectrogram_bucket}/{file_name}, '
+                                f'{spec_label}\n')
+
+with open(data_directory / 'training_input_128_128_linear_scale.csv', 'w') \
+        as training_file:
+    for event in tqdm(events):
+        event_gcp = RequestEventGCP(event,
+                                    seismic_data_bucket,
+                                    spectrogram_bucket,
+                                    spectrogram_height=128,
+                                    spectrogram_width=128)
+        labels_dict = df_labels[df_labels['event_resource_id'] ==
+                                event_gcp.event_resource_id]
+        try:
+            file_names, spec_labels = event_gcp.write_spectrogram_to_bucket(
+                labels_dict, db_scale=False)
+        except Exception as e:
+            logger.error(e)
+            continue
+
+        for file_name, spec_label in zip(file_names, spec_labels):
+            training_file.write(f'gs://{spectrogram_bucket}/{file_name}, '
+                                f'{spec_label}\n')
 
 
 

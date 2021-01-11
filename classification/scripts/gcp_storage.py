@@ -62,7 +62,7 @@ class RequestEventGCP(RequestEvent):
         for blob in tqdm(blobs):
             blob.delete()
 
-    def write_spectrogram_to_bucket(self, label_dict):
+    def write_spectrogram_to_bucket(self, label_dict, db_scale=True):
         """
         create a spectrogram
         :param label_dict: A label dictionary, containing two keys <sensor>
@@ -120,7 +120,8 @@ class RequestEventGCP(RequestEvent):
                 try:
                     spec = librosa_spectrogram(tr.copy(),
                                                height=self.spectrogram_height,
-                                               width=self.spectrogram_width)
+                                               width=self.spectrogram_width,
+                                               db_scale=db_scale)
                 except Exception as e:
                     logger.error(e)
                     continue
