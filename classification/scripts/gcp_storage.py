@@ -70,29 +70,30 @@ class RequestEventGCP(RequestEvent):
         of labels
         :return:
         """
-        if self.spectrogram_bucket is None:
-            logger.error('The bucket where to store the spectrogram needs '
-                          'to be specified')
-            return
-        try:
-            st = self.get_waveform_from_bucket()
-        except Exception as e:
-            logger.error(e)
-            try:
-                st = self.get_waveforms()
-                if not st:
-                    logger.warning(f'no waveform for event '
-                                   f'{self.event_resource_id}')
-                    return
-                # self.write_data_to_bucket(force=True)
-            except Exception as e:
-                logger.error(e)
-                return
-
-        if not st:
-            logger.warning(f'no waveform for event '
-                           f'{self.event_resource_id}')
-            return
+        st = self.get_waveform_from_bucket()
+        # if self.spectrogram_bucket is None:
+        #     logger.error('The bucket where to store the spectrogram needs '
+        #                   'to be specified')
+        #     return
+        # try:
+        #     st = self.get_waveform_from_bucket()
+        # except Exception as e:
+        #     logger.error(e)
+        #     try:
+        #         st = self.get_waveforms()
+        #         if not st:
+        #             logger.warning(f'no waveform for event '
+        #                            f'{self.event_resource_id}')
+        #             return
+        #         self.write_data_to_bucket(force=True)
+        #     except Exception as e:
+        #         logger.error(e)
+        #         return
+        #
+        # if not st:
+        #     logger.warning(f'no waveform for event '
+        #                    f'{self.event_resource_id}')
+        #     return
         st = st.resample(sampling_rate=self.spectrogram_sampling_rate)
         spec_names = []
         labels = []
