@@ -36,7 +36,7 @@ class RequestEventGCP(RequestEvent):
         self.spectrogram_sampling_rate = spectrogram_sampling_rate
 
     def write_data_to_bucket(self, force=False):
-        bucket = self.storage_client.bucket(self.seismic_data_bucket)
+        # bucket = self.storage_client.bucket(self.seismic_data_bucket)
         file_base_url = self.event_file[:-4]
         for extension in ['.xml', '.mseed', '.context_mseed',
                           '.variable_mseed']:
