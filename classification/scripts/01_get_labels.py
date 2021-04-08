@@ -1,6 +1,6 @@
 import requests
-from microquake.clients import api_client
-from microquake.core.settings import settings
+from uquake.clients.old_api_client import api_client
+from uquake.core.settings import settings
 import json
 from tqdm import tqdm
 from loguru import logger
@@ -8,11 +8,14 @@ import pickle
 from pathlib import Path
 import os
 import pandas as pd
+from datetime import datetime
 
 api_base_url = settings.API_BASE_URL
 username = settings.API_USER
-password = settings.API_PASSWORD
-sc = api_client.SeismicClient(api_base_url, username, password)
+password = settings.API_PASS
+
+tmp = api_client.get_event_types(api_base_url, username=username,
+                                 password=password)
 
 tmp = api_client.get_event_types(api_base_url, username=username,
                                  password=password)
@@ -20,14 +23,18 @@ tmp = api_client.get_event_types(api_base_url, username=username,
 event_types = list(tmp.keys())
 
 
-def extract_labels(event_resource_id):
+def extract_labels(base_url, event_resource_id, user=None, passwd=None):
+
+    if base_url[-1] != '/':
+        base_url += '/'
+
     sensors_list = []
     labels_list = []
 
     encoded_resource_id = api_client.encode(event_resource_id)
-    request_url = f'{api_base_url}events/' \
+    request_url = f'{base_url}events/' \
         f'{encoded_resource_id}/trace_labels'
-    response = requests.get(request_url)
+    response = requests.get(request_url, auth=(user, passwd))
     labels = json.loads(response.content)
     for label in labels:
         if label['sensor'] is None:
@@ -39,6 +46,33 @@ def extract_labels(event_resource_id):
     return sensors_list, labels_list
 
 
+def get_catalogue(base_url, user=None, passwd=None, timeout=200, **kwargs):
+    if base_url[-1] != '/':
+        base_url += '/'
+    request_url = base_url + 'events'
+
+    params = kwargs
+
+    query = True
+    events = []
+    while query:
+        if query == True:
+            re = requests.get(request_url, params=params,
+                              auth=(user, passwd)).json()
+        else:
+            re = requests.get(query).json()
+        if not re:
+            break
+        logger.info(f"page {re['current_page']} of "
+                    f"{re['total_pages']}")
+
+        query = re['next']
+
+        for event in re['results']:
+            events.append(api_client.RequestEvent(event))
+
+    return events
+
 events_list = []
 labels_list = []
 labels_dict_out = {'event_resource_id': [], 'sensor': [], 'label': []}
@@ -48,16 +82,41 @@ for event_type in event_types:
     if event_type == 'seismic event':
         status = 'accepted'
 
-    response, events = sc.events_list(evaluation_mode='manual',
-                                      status=status,
-                                      event_type=event_type,
-                                      page_size=1000)
+    # response, events = sc.events_list(evaluation_mode='manual',
+    #                                   status=status,
+    #                                   event_type=event_type,
+    #                                   page_size=1000)
+    try:
+        events = get_catalogue(api_base_url, user=username, passwd=password,
+                               status=status, event_type=tmp[event_type],
+                               evaluation_mode='manual', page_size=1000)
+    except Exception as e:
+        logger.error(e)
+        try:
+            events = get_catalogue(api_base_url, user=username,
+                                   passwd=password,
+                                   status=status, event_type=tmp[event_type],
+                                   evaluation_mode='manual', page_size=1000)
+        except Exception as e:
+            logger.error(e)
+            continue
 
     for event in tqdm(events):
         # if not hasattr(event, 'trace_labels'):
         #     continue
 
-        sensors, labels = extract_labels(event.event_resource_id)
+        try:
+            sensors, labels = extract_labels(api_base_url,
+                                             event.event_resource_id,
+                                             user=username, passwd=password)
+        except:
+            try:
+                sensors, labels = extract_labels(api_base_url,
+                                                 event.event_resource_id,
+                                                 user=username,
+                                                 passwd=password)
+            except:
+                continue
 
         if not labels:
             continue
@@ -75,7 +134,7 @@ for event_type in event_types:
 
 # converting list of dictionary to dictionary of list
 
-data_directory = Path(os.environ['SEISMICDATADIR'])
+data_directory = Path(os.environ['EVENT_CLASSIFICATION_DATA_DIR'])
 
 events_dict = {}
 for key in events_list[0].keys():

@@ -60,9 +60,6 @@ def split_filename_label(file_list):
     labels = [os.path.split(f)[0].split('/')[-1] for f in tmp]
 
 
-
-
-
 class SpectrogramDataset(Dataset):
 
     def __init__(self, file_list):
@@ -79,7 +76,6 @@ class SpectrogramDataset(Dataset):
         self.labels_dict = {}
         for label, category in zip(self.labels, self.unique_categories):
             self.labels_dict[category] = label
-
 
     def __len__(self):
         return len(self.file_list)
