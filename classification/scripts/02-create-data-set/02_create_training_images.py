@@ -25,7 +25,9 @@ seismic_data_bucket = 'seismic-data'
 # spectrogram_bucket = 'spectrogram-auto-ml-ot'
 spectrogram_bucket = 'event-classification-mel-spectrograms'
 
-# event_gcp = RequestEventGCP(events[0], seismic_data_bucket, spectrogram_bucket)
+# event_gcp = RequestEventGCP(events[0],
+# seismic_data_bucket,
+# spectrogram_bucket)
 
 with open(data_directory / 'training_input_256_256.csv', 'w') as training_file:
     for event in tqdm(events):

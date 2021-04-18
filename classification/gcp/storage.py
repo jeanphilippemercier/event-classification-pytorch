@@ -41,11 +41,6 @@ class RequestEventGCP(RequestEvent):
     # def get_labels(self):
 
 
-
-
-
-
-
 def write_to_bucket(bucket_name, file_obj, blob_name):
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(blob_name)
