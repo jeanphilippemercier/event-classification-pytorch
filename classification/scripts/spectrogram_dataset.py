@@ -7,6 +7,7 @@ import numpy as np
 from glob import glob
 from pathlib import Path
 from os.path import sep
+from loguru import logger
 
 
 # class Label():
@@ -35,13 +36,14 @@ def get_file_list(input_directory, suffix, extension='png'):
     return glob(path)
 
 
-def split_dataset(file_list, split=0.8, seed=None):
+def split_dataset(path, split=0.8, seed=None, max_item_per_category=100000):
     """
 
-    :param file_list: list of image files
+    :param path: list of image files
     :param split: set_1 fraction (between 0 and 1)
     :param seed: seed for the random number generator to provide
     reproducibility (Default None)
+    :param max_item_per_category: maximum number of item per category
     :return: set_1, set_2
     """
 
@@ -62,20 +64,40 @@ def split_filename_label(file_list):
 
 class SpectrogramDataset(Dataset):
 
-    def __init__(self, file_list):
-        # self.df_data = pd.read_csv(csv_file, skipinitialspace=True)
+    def __init__(self, path, max_image_sample=100000,
+                 unused_category=['unknown'], seed=None):
 
-        self.file_list = file_list
+        self.max_image_sample = int(max_image_sample)
+        self.path = Path(path)
+        dir_list = self.path.glob('*')
 
-        self.category_list = [str(Path(fle).parent).split(sep)[-1]
-                              for fle in file_list]
-
-        self.unique_categories = np.unique(self.category_list)
-        self.labels = np.arange(len(self.unique_categories))
+        self.category_list = [str(dr).split(sep)[-1] for dr in dir_list
+                              if str(dr).split(sep)[-1] not in unused_category]
+        self.labels = np.arange(len(self.category_list))
 
         self.labels_dict = {}
-        for label, category in zip(self.labels, self.unique_categories):
+        self.file_list = []
+        self.label_list = []
+        np.random.seed(seed)
+        for label, category in zip(self.labels, self.category_list):
             self.labels_dict[category] = label
+
+            cat_file_list = [fle for fle in
+                             (self.path / category).glob('*.jpg')]
+
+            logger.info(f'the {category} category '
+                        f'contains {len(cat_file_list)} images')
+            nb_files = self.max_image_sample
+            if len(cat_file_list) < nb_files:
+                nb_files = len(cat_file_list)
+
+            for f in np.random.choice(cat_file_list,
+                                      size=nb_files, replace=False):
+                self.file_list.append(f)
+                self.label_list.append(label)
+
+        self.file_list = np.array(self.file_list)
+        self.label_list = np.array(self.label_list)
 
     def __len__(self):
         return len(self.file_list)
@@ -85,13 +107,11 @@ class SpectrogramDataset(Dataset):
             idx = idx.tolist()
 
         # label = self.df_data.iloc[idx]['label']
-        category = self.category_list[idx]
-        label = self.labels_dict[category]
+        # category = self.category_list[idx]
+        label = self.label_list[idx]
 
-        img_file = os.path.join(self.file_list[idx])
-
-        image = torch.from_numpy(np.array(Image.open(
-            self.file_list[idx])).astype(np.float32))
+        image = torch.from_numpy((np.array(Image.open(
+            self.file_list[idx])) / 255).astype(np.float32))
 
         # return {'data': image, 'label': label}
         return image, label
@@ -99,7 +119,7 @@ class SpectrogramDataset(Dataset):
     @property
     def shape(self):
         px_x, px_y = self[0][0].shape
-        return len(self.labels), px_x, px_y
+        return len(self.label_list), px_x, px_y
 
     @property
     def nb_pixel(self):
@@ -111,7 +131,19 @@ class SpectrogramDataset(Dataset):
 
     @property
     def nb_categories(self):
-        return len(self.unique_categories)
+        return len(self.category_list)
+
+    # def split_data_set(self, split_fraction=0.8, seed=None):
+    #
+    #     np.random.seed(seed)
+    #     choices = np.random.choice([False, True], size=len(self),
+    #                                p=[1 - split_fraction, split_fraction])
+    #     not_choices = [not choice for choice in choices]
+    #     set_1 = self.file_list[choices]
+    #     labels_set_1 = self.label_list[choices]
+    #     set_2 = self.file_list[not_choices]
+    #     labels_set_2 = self.label_list[not_choices]
+
 
 
 

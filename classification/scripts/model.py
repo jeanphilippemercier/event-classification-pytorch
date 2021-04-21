@@ -1,9 +1,12 @@
 from torch import nn
+from torchvision import models
 
 # Define the model
+
+
 class CNN(nn.Module):
     # K represents the number of features
-    def __init__(self, K):
+    def __init__(self, k):
         super(CNN, self).__init__()
 
         self.conv_layers = nn.Sequential(
@@ -21,11 +24,11 @@ class CNN(nn.Module):
         # "No zero padding, non-unit strides"
         # https://pytorch.org/docs/stable/nn.html
         self.dense_layers = nn.Sequential(
-            nn.Dropout(0.2),
+            nn.Dropout(0.4),
             nn.Linear(28800, 512),
             nn.ReLU(),
             nn.Dropout(0.2),
-            nn.Linear(512, K)
+            nn.Linear(512, k)
         )
 
     def forward(self, X):

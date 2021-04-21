@@ -64,11 +64,11 @@ event_type_lookup = {'anthropogenic event': 'noise',
                      'controlled explosion': 'blast',
                      'quarry blast': 'blast',
                      'earthquake': 'seismic event',
-                     'sonic boom': 'test pulse',
+                     'sonic boom': 'noise',
                      'collapse': 'noise',
                      'other event': 'noise',
                      'thunder': 'noise',
-                     'induced or triggered event': 'unknown',
+                     'induced or triggered event': 'noise',
                      'explosion': 'blast',
                      'experimental explosion': 'blast'}
 
