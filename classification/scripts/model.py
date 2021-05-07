@@ -182,40 +182,40 @@ class EventClassifier(object):
         pass
 
 
-class PickerModel(nn.Module):
-    def __init__(self):
-        super(PickerModel, self).__init__()
-        self.conv_layers = nn.Sequential(
-            nn.Conv1d(1, 64, 15),
-            nn.ReLU(),
-            nn.Conv1d(64, 64, 15),
-            nn.ReLU(),
-            nn.Conv1d(64, 64, 15),
-            nn.ReLU(),
-            nn.Conv1d(64, 128, 15),
-            nn.ReLU(),
-            nn.Conv1d(128, 128, 15),
-            nn.ReLU(),
-            nn.Conv1d(128, 128, 15),
-            nn.ReLU()
-        )
-
-        self.dense_layers = nn.Sequential(
-            nn.Dropout(0.2),
-            nn.Linear(in_features=128 * 172, out_features=256),
-            nn.ReLU(),
-            nn.Linear(in_features=256, out_features=256),
-            nn.ReLU(),
-            nn.Linear(in_features=256, out_features=256),
-            nn.ReLU(),
-            nn.Linear(in_features=256, out_features=1))
-
-    def forward(self, X):
-        out = self.conv_layers(X)
-        out = out.view(out.size(0), -1)
-        out = self.dense_layers(out)
-        # input(out)
-        return out
+# class PickerModel(nn.Module):
+#     def __init__(self):
+#         super(PickerModel, self).__init__()
+#         self.conv_layers = nn.Sequential(
+#             nn.Conv1d(1, 64, 15),
+#             nn.ReLU(),
+#             nn.Conv1d(64, 64, 15),
+#             nn.ReLU(),
+#             nn.Conv1d(64, 64, 15),
+#             nn.ReLU(),
+#             nn.Conv1d(64, 128, 15),
+#             nn.ReLU(),
+#             nn.Conv1d(128, 128, 15),
+#             nn.ReLU(),
+#             nn.Conv1d(128, 128, 15),
+#             nn.ReLU()
+#         )
+#
+#         self.dense_layers = nn.Sequential(
+#             nn.Dropout(0.2),
+#             nn.Linear(in_features=128 * 172, out_features=256),
+#             nn.ReLU(),
+#             nn.Linear(in_features=256, out_features=256),
+#             nn.ReLU(),
+#             nn.Linear(in_features=256, out_features=256),
+#             nn.ReLU(),
+#             nn.Linear(in_features=256, out_features=1))
+#
+#     def forward(self, X):
+#         out = self.conv_layers(X)
+#         out = out.view(out.size(0), -1)
+#         out = self.dense_layers(out)
+#         # input(out)
+#         return out
 
 
 class Picker(EventClassifier):
@@ -323,7 +323,6 @@ class Picker(EventClassifier):
         outputs = [out.item() for out in outputs_tensor.cpu()]
         return outputs
 
-
     def validate(self, dataset: PickingDataset, batch_size):
         predictions = []
         training_loader = DataLoader(dataset, batch_size=batch_size,
@@ -346,9 +345,18 @@ class Picker(EventClassifier):
             losses.append(loss.cpu().item())
         return predictions, np.mean(losses), np.std(losses)
 
-    def predict
+    def save(self, file_name):
+        with(open(file_name, 'wb')) as f_out:
+            pickle.dump(self, f_out)
+
+    @classmethod
+    def read(cls, file_name):
+        with(open(file_name, 'rb')) as f_in:
+            return pickle.load(f_in)
 
 
+def read_picker(file_name):
+    return Picker.read(file_name)
 
 
 

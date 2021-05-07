@@ -52,7 +52,6 @@ for epoch in tqdm(range(0, 100)):
     plt.ylabel('loss/accuracy')
     plt.show()
 
-bubu
 # pickle.dump(training_dataset, open('training_dataset.pickle', 'wb'))
 # training_dataset = pickle.load(open('training_dataset.pickle', 'rb'))
 # training_dataset = pickle.load(open('training_dataset.pickle', 'rb'))
