@@ -1,18 +1,18 @@
-import spectrogram_dataset
-from spectrogram_dataset import SpectrogramDataset
+import dataset
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch
 import numpy as np
 from importlib import reload
-from torchvision import models
-reload(spectrogram_dataset)
-import os
-from glob import glob
+reload(dataset)
 from tqdm import tqdm
 import model
 import pickle
 import matplotlib.pyplot as plt
+from loguru import logger
+from sklearn.metrics import confusion_matrix
+from plotcm import plot_confusion_matrix
+import model
 reload(model)
 
 input_directory = '/data_1/classification_dataset/'
@@ -24,19 +24,48 @@ extension = 'jpg'
 # training, test = spectrogram_dataset.split_dataset(input_directory, split=0.8,
 #                                                    seed=1)
 
-# training_dataset = spectrogram_dataset.SpectrogramDataset(input_directory,
-#                                                           max_image_sample=2e6)
+file_list = dataset.FileList(input_directory)
+
+ec = model.EventClassifier(len(file_list.category_list))
+
+losses = []
+accuracies = []
+for epoch in tqdm(range(0, 100)):
+    logger.info('selecting data')
+    training_dataset = file_list.select(1e5)
+    ec.train(training_dataset, batch_size=2000)
+
+    logger.info(f'Average iteration loss: {np.mean(ec.losses): 0.3f} '
+                f'+/- {np.std(ec.losses): 0.3f}')
+    logger.info(f'Average iteration accuracy: {np.mean(ec.accuracies):0.3f} '
+                f'+/- {np.std(ec.accuracies): 0.3f}')
+
+    losses.append(np.mean(ec.losses))
+    accuracies.append(np.mean(ec.accuracies))
+
+    plt.figure(1)
+    plt.clf()
+    plt.ion()
+    plt.plot(np.arange(epoch + 1), losses)
+    plt.plot(np.arange(epoch + 1), accuracies)
+    plt.xlabel('epoch')
+    plt.ylabel('loss/accuracy')
+    plt.show()
+
+bubu
 # pickle.dump(training_dataset, open('training_dataset.pickle', 'wb'))
 # training_dataset = pickle.load(open('training_dataset.pickle', 'rb'))
-training_dataset = pickle.load(open('training_dataset.pickle', 'rb'))
+# training_dataset = pickle.load(open('training_dataset.pickle', 'rb'))
 
 # test_dataset = spectrogram_dataset.SpectrogramDataset(input_directory,
-#                                                       max_image_sample=4e5)
+#                                                       max_image_sample=4e4)
 # pickle.dump(test_dataset, open('test_dataset.pickle', 'wb'))
 # test_dataset = pickle.load(open('test_dataset.pickle', 'rb'))
 
 nb_pixel = training_dataset.nb_pixel
 nb_categories = training_dataset.nb_categories
+
+
 
 # model = model.CNN(nb_categories)
 # VGG16
@@ -47,9 +76,9 @@ nb_categories = training_dataset.nb_categories
 # model.features = nn.Sequential(*first_conv_layer)
 
 # resnet 50
-model = models.resnet18(pretrained=False)
-weights = model.conv1.weight.clone()
-model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+# model = models.resnet34(pretrained=False)
+# weights = model.conv1.weight.clone()
+# model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
 # model.conv1.weight[:, :1] = weights
 # model.conv1.weight[:, 3] = model.conv1.weight[:, 0]
 
@@ -60,45 +89,33 @@ model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
 #     nn.Linear(128, nb_categories)
 # )
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print(device)
-model.to(device)
-
-criterion = nn.CrossEntropyLoss()
-
-# optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
-optimizer = torch.optim.Adam(model.parameters())
 
 batch_size = 2000
 
 training_loader = DataLoader(training_dataset, batch_size=batch_size,
                              shuffle=True)
 
-n_epochs = 10
+n_epochs = 25
 
 # Stuff to store
 train_losses = []  # np.zeros(n_epochs)
-test_losses = np.zeros(n_epochs)
+train_accuracies = []
 
-plt.ion()
-fig, ax = plt.subplots()
-xlim = 1000
-# plt.xlim([0, xlim])
-plt.ylim([0, 1])
-plt.axhline(0.9, color='k', ls='--')
-plt.axhline(1.0, color='k', ls='--')
-plt.axhline(0.8, color='k', ls='--')
-
-fig2, ax2 = plt.subplots()
-plt.xlim([0, 2300])
-plt.ylim([0, 2])
-plt.show()
+# plt.ion()
+# fig, ax = plt.subplots()
+# xlim = 1000
+# # plt.xlim([0, xlim])
+# plt.ylim([0, 1])
+# plt.axhline(0.95, color='k', ls='--')
+# plt.axhline(0.98, color='k', ls='--')
+#
+# fig2, ax2 = plt.subplots()
+# plt.xlim([0, 2300])
+# plt.ylim([0, 2])
+# plt.show()
 
 for it in tqdm(range(n_epochs)):
-    train_loss = []
-    iterations = []
-    train_accuracy = []
-    i = 0
+
     for inputs, targets in tqdm(training_loader):
         inputs = inputs.view(inputs.size()[0], -1, inputs.size()[1],
                              inputs.size()[2])
@@ -125,38 +142,96 @@ for it in tqdm(range(n_epochs)):
         # print(loss.item())
         train_loss.append(loss.item())
         iterations.append(i)
-        if i == 0:
-            sc, = ax.plot(iterations, train_loss)
+
+        if i % 20 == 19:
+            logger.info(f'accuracy: '
+                        f'{np.mean(np.array(train_accuracy)[-100:-1]): 0.3f} '
+                        f'+/- '
+                        f'{np.std(np.array(train_accuracy)[-100:-1]):0.3f}')
+            cm = confusion_matrix(targets.cpu().detach().numpy(),
+                                  np.array(tmp_choices))
+
+            print(cm)
+
+            plt.figure(10)
+            plt.clf()
+            plot_confusion_matrix(cm, training_dataset.category_list,
+                                  normalize=True)
             plt.show()
-            sc2, = ax.plot(iterations, train_accuracy)
-        else:
-            # plt.figure(1)
-            # plt.clf()
-            # plt.plot(iterations, train_losses)
-            # plt.show()
-            # ax.plot(iterations, train_losses)
-            if np.max(iterations) > xlim:
-                xlim += 1000
-                plt.xlim([0, xlim])
-            sc.set_data(iterations, train_loss)
-            sc2.set_data(iterations, train_accuracy)
 
-            ax = plt.gca()
 
-            # recompute the ax.dataLim
-            ax.relim()
-            # update ax.viewLim using the new dataLim
-            ax.autoscale_view()
-            plt.draw()
+            # test_loader = DataLoader(test_dataset, batch_size=1000,
+            #                          shuffle=True)
+            #
+            # test_accuracies = []
+            # for t_inputs, t_targets in tqdm(test_loader):
+            #     model = model.to(device)
+            #     inps = t_inputs.view(t_inputs.size()[0], -1,
+            #                          t_inputs.size()[1],
+            #                          t_inputs.size()[2])
+            #     # inps = inps.to(device)
+            #     # targs = t_targets.to(device)
+            #     targs = t_targets.to(device)
+            #     #
+            #     outs = model(inps.to(device))
+            #
+            #     tmp_choices = [np.argmax(out.cpu().detach().numpy())
+            #                    for out in outs]
+            #     test_accuracies.append(np.sum(tmp_choices ==
+            #                                 targs.cpu().detach().numpy()) \
+            #                            / len(tmp_choices))
+            #
+            # logger.info(f'accuracy: {np.mean(test_accuracies)} +/- '
+            #             f'{np.std(test_accuracies)}')
 
-            fig.canvas.draw_idle()
-            # fig2.canvas.draw_idle()
-            try:
-                fig.canvas.flush_events()
-                # fig2.canvas.flush_events()
-            except NotImplementedError:
-                pass
+        # if i == 0:
+        #     sc, = ax.plot(iterations, train_loss)
+        #     plt.show()
+        #     sc2, = ax.plot(iterations, train_accuracy)
+        # # if i == 200:
+        # #     optimizer.param_groups[0]['lr'] = \
+        # #         optimizer.param_groups[0]['lr'] * 10
+        # # if i == 400:
+        # #     optimizer.param_groups[0]['lr'] = \
+        # #         optimizer.param_groups[0]['lr'] * 10
+        # else:
+        #     # plt.figure(1)
+        #     # plt.clf()
+        #     # plt.plot(iterations, train_losses)
+        #     # plt.show()
+        #     # ax.plot(iterations, train_losses)
+        #     if np.max(iterations) > xlim:
+        #         xlim += 1000
+        #         plt.xlim([0, xlim])
+        #     sc.set_data(iterations, train_loss)
+        #     sc2.set_data(iterations, train_accuracy)
+        #
+        #     ax = plt.gca()
+        #
+        #     # recompute the ax.dataLim
+        #     ax.relim()
+        #     # update ax.viewLim using the new dataLim
+        #     ax.autoscale_view()
+        #     plt.draw()
+        #
+        #     fig.canvas.draw_idle()
+        #     # fig2.canvas.draw_idle()
+        #     try:
+        #         fig.canvas.flush_events()
+        #         # fig2.canvas.flush_events()
+        #     except NotImplementedError:
+        #         pass
         i += 1
+        train_losses.append(train_loss)
+        train_accuracies.append(train_accuracy)
+
+    # to avoid over-fitting the model
+    # training_dataset = spectrogram_dataset.SpectrogramDataset(input_directory,
+    #                                                           max_image_sample
+    #                                                           =2e5)
+    training_dataset = file_list.select(1e5)
+    training_loader = DataLoader(training_dataset, batch_size=batch_size,
+                                 shuffle=True)
 
     # train_losses.append(np.min(train_loss))
     # train_accuracy.append(torch.sum())
@@ -170,6 +245,32 @@ for it in tqdm(range(n_epochs)):
     #         fig.canvas.flush_events()
     #     except NotImplementedError:
     #         pass
+
+pickle.dump(model, open('model.pickle', 'rb'))
+
+# cpu_model = model.cpu()
+# test_loader = DataLoader(test_dataset, batch_size=1000, shuffle=True)
+# i = 0
+# acc = 0
+# for t_inputs, t_targets in tqdm(test_loader):
+#     model = model.to(device)
+#     inps = t_inputs.view(t_inputs.size()[0], -1, t_inputs.size()[1],
+#                          t_inputs.size()[2])
+#     # inps = inps.to(device)
+#     # targs = t_targets.to(device)
+#     targs = t_targets.to(device)
+#     #
+#     outputs = model(inps.to(device))
+#
+#     tmp_choices = [np.argmax(out.cpu().detach().numpy())
+#                    for out in outputs]
+#     total_accuracy = np.sum(tmp_choices ==
+#                             targs.cpu().detach().numpy()) \
+#                      / len(tmp_choices)
+#
+#     acc += total_accuracy
+#     i += 1
+    # input(total_accuracy)
 
 
 

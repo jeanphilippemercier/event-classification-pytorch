@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 import torch
 from uquake.waveform.pick import calculate_snr
 from PIL import Image, ImageOps
+from torchaudio.transforms import MelSpectrogram, AmplitudeToDB
+from dataset import spectrogram
 
 
 def get_waveform(waveform_file, inventory):
@@ -36,26 +38,6 @@ def get_event_id(filename):
     cat = read_events(filename)
     return str(filename.stem), cat[0].resource_id.id
 
-# with open(data_directory / 'training_input_128_128.csv', 'w') as training_file:
-#     for event in tqdm(events):
-#         event_gcp = RequestEventGCP(event,
-#                                     seismic_data_bucket,
-#                                     spectrogram_bucket,
-#                                     spectrogram_height=128,
-#                                     spectrogram_width=128)
-#         labels_dict = df_labels[df_labels['event_resource_id'] ==
-#                                 event_gcp.event_resource_id]
-#         try:
-#             file_names, spec_labels = event_gcp.write_spectrogram_to_bucket(
-#                 labels_dict, db_scale=True)
-#         except Exception as e:
-#             logger.error(e)
-#             continue
-#
-#         for file_name, spec_label in zip(file_names, spec_labels):
-#             training_file.write(f'gs://{spectrogram_bucket}/{file_name}, '
-#                                 f'{spec_label}\n')
-
 
 event_type_lookup = {'anthropogenic event': 'noise',
                      'acoustic noise': 'noise',
@@ -73,7 +55,7 @@ event_type_lookup = {'anthropogenic event': 'noise',
                      'experimental explosion': 'blast'}
 
 input_data_dir = Path('/data_1/ot-reprocessed-data/')
-output_data_dir = Path('/data_1/classification_dataset')
+output_data_dir = Path('/data_1/pick_dataset')
 output_data_dir.mkdir(parents=True, exist_ok=True)
 sampling_rate = 6000
 # num_threads = int(np.ceil(cpu_count() - 10))
@@ -82,59 +64,11 @@ replication_level = 5
 snr_threshold = 10
 sequence_length_second = 2
 perturbation_range_second = 1
-image_width = 128
-image_height = 128
+number_sample = 256
 buffer_image_fraction = 0.05
 
-buffer_image_sample = int(image_width * buffer_image_fraction)
 
-hop_length = int(sequence_length_second * sampling_rate //
-                 (image_width + 2 * buffer_image_sample))
-
-
-def spectrogram(trace: Trace, perturbation_sample: float = None):
-
-    mel_spec = MelSpectrogram(sample_rate=sampling_rate,
-                              n_mels=image_height,
-                              hop_length=hop_length,
-                              power=1,
-                              pad_mode='reflect',
-                              normalized=True)
-
-    amplitude_to_db = AmplitudeToDB()
-
-    trace = trace.taper(max_length=0.01, max_percentage=0.05)
-    # plt.figure(3)
-    # plt.clf()
-    # plt.plot(trace.data)
-
-    n_pts = sequence_length_second * sampling_rate
-
-    target_sequence_length = int(
-        2 ** (np.ceil(np.log(n_pts) / np.log(2))))
-    n_zeros = target_sequence_length - len(trace.data)
-
-    data = np.hstack((trace.data, np.zeros(n_zeros)))
-
-    data = np.roll(data, perturbation_sample)
-
-    # data = data[:sequence_length_second * sampling_rate]
-
-    torch_data = torch.tensor(data).type(torch.float32)
-
-    spec = (mel_spec(torch_data) + 1e-3)[:, buffer_image_sample:
-                                         buffer_image_sample
-                                         + image_width]
-    spec_db = amplitude_to_db(spec.abs())
-    spec_db = spec_db - spec_db.min()
-    spec_db = (spec_db / spec_db.max() * 255).type(torch.uint8)
-    img = Image.fromarray(np.array(spec_db.tolist()).astype(
-        np.uint8))
-
-    return img
-
-
-def create_training_image(waveform_file):
+def create_training_signal(waveform_file):
     # logger.info('here')
     waveform_file_path = input_data_dir / waveform_file
     cat = read_events(waveform_file_path.with_suffix('.xml'))
@@ -148,6 +82,7 @@ def create_training_image(waveform_file):
                             max_length=0.01).resample(
             sampling_rate=sampling_rate)
     except Exception as e:
+        logger.error(e)
         trs = []
         for tr in st:
             if np.nan in tr.data:
@@ -157,6 +92,8 @@ def create_training_image(waveform_file):
 
     trs = []
     snrs = []
+    pick_times = []
+    logger.info(event_type_lookup[cat[0].event_type])
     if event_type_lookup[cat[0].event_type] == 'seismic event':
         for arrival in cat[0].preferred_origin().arrivals:
             site = arrival.pick.site
@@ -174,37 +111,46 @@ def create_training_image(waveform_file):
                 trs.append(tr.copy().resample(sampling_rate=
                                               int(sampling_rate)))
                 snrs.append(snr)
+                pick_times.append(arrival.pick.time)
 
     else:
-        for tr in st:
-            trs.append(tr.trim(endtime=tr.stats.starttime +
-                               sequence_length_second))
-            snrs.append(0)
+        return
 
-    for tr, snr in zip(trs, snrs):
-        perturbations = (np.random.rand(replication_level)
-                         * perturbation_range_second
-                         * sampling_rate).astype(int)
+    ct = 0
+    for tr, pick_time in zip(trs, pick_times):
+        for i in range(0, 5):
+            try:
 
-        for i, perturbation in enumerate(perturbations):
-            img = spectrogram(tr, perturbation_sample=perturbation)
+                start = np.random.randint(0, number_sample -
+                                          int(0.25 * number_sample))
 
-            filename = f'{event_time:0.0f}_{tr.stats.site}_' \
-                       f'{tr.stats.channel}_{i}.jpg'
+                pick_sample = int((pick_time - tr.stats.starttime) *
+                                  tr.stats.sampling_rate)
 
-            out_dir = (output_data_dir /
-                       event_type_lookup[cat[0].event_type])
+                start_sample = int(pick_sample - start)
 
-            out_dir.mkdir(parents=True, exist_ok=True)
+                data = tr.data[start_sample: start_sample + number_sample]
+                data = data - np.mean(data)
+                data = np.abs(data) / np.abs(data).max()
+                pick = start
 
-            out_file_name = out_dir / filename
-            ImageOps.grayscale(img).save(out_file_name, format='JPEG')
+                out_dict = {'data': data, 'pick': pick}
+
+                out_dir = output_data_dir
+                out_dir.mkdir(parents=True, exist_ok=True)
+                filename = f'{event_time:0.0f}_{tr.stats.site}_' \
+                           f'{tr.stats.channel}_{i}.pickle'
+
+                with open(out_dir / filename, 'wb') as file_out:
+                    pickle.dump(out_dict, file_out)
+            except Exception as e:
+                logger.error(e)
 
 
 if __name__ == '__main__':
     file_list = [f for f in input_data_dir.glob('*.mseed')]
     for f in tqdm(file_list):
-        create_training_image(f)
+        create_training_signal(f)
 
     # file_list = [f for f in input_data_dir.glob('*.mseed')]
     # with Pool(4) as pool:
