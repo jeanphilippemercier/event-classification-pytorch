@@ -147,6 +147,11 @@ class EventClassifier(object):
     def save(self, file_name):
         pickle.dump(self, open(file_name, 'wb'))
 
+    @classmethod
+    def read(cls, file_name):
+        with open(file_name, 'rb') as f_in:
+            return pickle.load(f_in)
+
     @staticmethod
     def measure_accuracy(targets, predictions):
         max_index = predictions.max(dim=1)[1]
@@ -180,6 +185,10 @@ class EventClassifier(object):
 
     def predict_spectrogram(self, spec):
         pass
+
+
+def read_classifier(file_name):
+    return EventClassifier.read(file_name)
 
 
 # class PickerModel(nn.Module):
