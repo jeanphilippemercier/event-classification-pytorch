@@ -199,8 +199,9 @@ def spectrogram(trace: Trace):
 
     amplitude_to_db = AmplitudeToDB()
 
-    trace = trace.detrend('linear')
-    trace = trace.detrend('demean')
+    # trace = trace.detrend('linear')
+    # trace = trace.detrend('demean')
+    trace.data = trace.data - np.mean(trace.data)
     trace = trace.taper(max_length=0.01, max_percentage=0.05)
     trace = trace.trim(starttime=trace.stats.starttime,
                        endtime=trace.stats.starttime + sequence_length_second,

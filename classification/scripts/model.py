@@ -15,6 +15,9 @@ from PIL import Image, ImageOps
 from dataset import spectrogram
 from torch import nn
 from resnet1d import ResNet1D
+from importlib import reload
+import dataset
+reload(dataset)
 
 
 sampling_rate = 6000
@@ -166,10 +169,10 @@ class EventClassifier(object):
         """
         spec = []
         for tr in stream:
-            try:
-                spec.append(spectrogram(tr))
-            except Exception as e:
-                logger.error(e)
+            # try:
+            spec.append(dataset.spectrogram(tr))
+            # except Exception as e:
+            #     logger.error(e)
 
         spec = torch.from_numpy(np.array(spec))
         # spec = torch.from_numpy(np.array([spectrogram(tr) for tr in stream]))

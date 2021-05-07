@@ -15,7 +15,7 @@ from plotcm import plot_confusion_matrix
 import model
 reload(model)
 
-input_directory = '/data_1/classification_dataset/'
+input_directory = '/data_1/classification_dataset_2/'
 suffix = ''
 extension = 'jpg'
 
@@ -33,7 +33,7 @@ accuracies = []
 for epoch in tqdm(range(0, 100)):
     logger.info('selecting data')
     training_dataset = file_list.select(1e5)
-    ec.train(training_dataset, batch_size=2000)
+    ec.train(training_dataset, batch_size=1000)
 
     logger.info(f'Average iteration loss: {np.mean(ec.losses): 0.3f} '
                 f'+/- {np.std(ec.losses): 0.3f}')

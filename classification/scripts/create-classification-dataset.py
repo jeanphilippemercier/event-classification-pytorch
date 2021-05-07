@@ -61,7 +61,7 @@ sampling_rate = 6000
 # num_threads = int(np.ceil(cpu_count() - 10))
 num_threads = 10
 replication_level = 5
-snr_threshold = 10
+snr_threshold = 6
 sequence_length_second = 2
 perturbation_range_second = 1
 image_width = 128
@@ -139,7 +139,6 @@ def create_training_image(waveform_file):
         st.traces = trs
 
     trs = []
-    snrs = []
     logger.info(event_type_lookup[cat[0].event_type])
     if event_type_lookup[cat[0].event_type] == 'seismic event':
         for arrival in cat[0].preferred_origin().arrivals:
@@ -148,8 +147,9 @@ def create_training_image(waveform_file):
                 snr = calculate_snr(tr, arrival.pick.time,
                                     pre_wl=20e-3,
                                     post_wl=20e-3)
-                if snr < snr_threshold:
-                    continue
+                if arrival.pick.evaluation_mode == 'automatic':
+                    if snr < snr_threshold:
+                        continue
                 tr.trim(starttime=tr.stats.starttime,
                         endtime=tr.stats.starttime +
                         sequence_length_second,
@@ -157,7 +157,6 @@ def create_training_image(waveform_file):
                         fill_value=0)
                 trs.append(tr.copy().resample(sampling_rate=
                                               int(sampling_rate)))
-                snrs.append(snr)
 
     elif event_type_lookup[cat[0].event_type] == 'blast':
         for tr in st:
@@ -165,16 +164,14 @@ def create_training_image(waveform_file):
                 continue
             trs.append(tr.trim(endtime=tr.stats.starttime +
                                sequence_length_second))
-            snrs.append(0)
 
     else:
         for tr in st:
             trs.append(tr.trim(endtime=tr.stats.starttime +
                                sequence_length_second))
-            snrs.append(0)
 
     ct = 0
-    for tr, snr in zip(trs, snrs):
+    for tr in trs:
         try:
             spec = spectrogram(tr)
         except Exception as e:
