@@ -1,5 +1,5 @@
 from torchvision import models
-from dataset import Dataset, PickingDataset
+from dataset import Dataset, PickingDataset, ClassifierDataset1D
 from torch.utils.data import DataLoader
 import torch
 from torch import nn
@@ -82,6 +82,8 @@ class EventClassifier(object):
 
     def train(self, dataset: Dataset, batch_size: int):
 
+        self.model.train()
+
         self.accuracies = []
         self.losses = []
 
@@ -114,6 +116,7 @@ class EventClassifier(object):
         self.losses.append(loss.item())
 
     def validate(self, dataset: Dataset, batch_size: int):
+        self.model.eval()
         training_loader = DataLoader(dataset, batch_size=batch_size,
                                      shuffle=True)
         self.validation_targets = np.zeros(len(dataset))
@@ -140,6 +143,7 @@ class EventClassifier(object):
             ).detach().numpy()
 
             accuracy += self.measure_accuracy(targets, outputs)
+        self.model.train()
         return accuracy.cpu().detach().numpy() / (i + 1)
 
     def display_memory(self):
@@ -167,67 +171,204 @@ class EventClassifier(object):
         waveforms
         :return:
         """
-        spec = []
-        for tr in stream:
-            # try:
-            spec.append(dataset.spectrogram(tr))
-            # except Exception as e:
-            #     logger.error(e)
+        specs = generate_spectrogram(stream)
+        return self.predict_spectrogram(specs)
 
-        spec = torch.from_numpy(np.array(spec))
-        # spec = torch.from_numpy(np.array([spectrogram(tr) for tr in stream]))
-        spec = spec.view(spec.shape[0], -1, spec.shape[1], spec.shape[2])
-        spec = spec.to(self.device)
+    def predict_spectrogram(self, specs):
+        self.model.eval()
+        if isinstance(specs, list):
+            specs = np.array(specs)
+        if len(specs.shape) == 2:
+            specs = torch.from_numpy(specs).view(1, 1, specs.shape[0],
+                                                 specs.shape[1])
+        else:
+            specs = torch.from_numpy(specs).view(specs.shape[0], 1,
+                                                 specs.shape[1],
+                                                 specs.shape[2])
+
+        specs = specs.to(self.device)
+        # self.model.train()
         with torch.no_grad():
-            return self.model(spec).argmax(axis=1).cpu()
-        # import matplotlib.pyplot as plt
-        # plt.figure(2)
-        # plt.plot(stream[23].data)
-        # plt.show()
-        return
+            predictions = (self.model(specs).argmax(axis=1).cpu(),
+                           self.model(specs).cpu())
 
-    def predict_spectrogram(self, spec):
-        pass
+        self.model.train()
+        return predictions
 
 
 def read_classifier(file_name):
     return EventClassifier.read(file_name)
 
 
-# class PickerModel(nn.Module):
-#     def __init__(self):
-#         super(PickerModel, self).__init__()
-#         self.conv_layers = nn.Sequential(
-#             nn.Conv1d(1, 64, 15),
-#             nn.ReLU(),
-#             nn.Conv1d(64, 64, 15),
-#             nn.ReLU(),
-#             nn.Conv1d(64, 64, 15),
-#             nn.ReLU(),
-#             nn.Conv1d(64, 128, 15),
-#             nn.ReLU(),
-#             nn.Conv1d(128, 128, 15),
-#             nn.ReLU(),
-#             nn.Conv1d(128, 128, 15),
-#             nn.ReLU()
-#         )
-#
-#         self.dense_layers = nn.Sequential(
-#             nn.Dropout(0.2),
-#             nn.Linear(in_features=128 * 172, out_features=256),
-#             nn.ReLU(),
-#             nn.Linear(in_features=256, out_features=256),
-#             nn.ReLU(),
-#             nn.Linear(in_features=256, out_features=256),
-#             nn.ReLU(),
-#             nn.Linear(in_features=256, out_features=1))
-#
-#     def forward(self, X):
-#         out = self.conv_layers(X)
-#         out = out.view(out.size(0), -1)
-#         out = self.dense_layers(out)
-#         # input(out)
-#         return out
+def generate_spectrogram(stream: Stream):
+
+    specs = []
+    trs = []
+    for tr in stream.copy():
+        # check if tr contains NaN
+        if np.any(np.isnan(tr.data)):
+            continue
+        trs.append(tr.copy())
+
+    st2 = Stream(traces=trs)
+    st2 = st2.trim(endtime=tr.stats.starttime + 2, pad=True,
+                 fill_value=0)
+    st2 = st2.detrend('demean').detrend('linear')
+
+    st2 = st2.taper(max_percentage=1, max_length=1e-2)
+
+    for tr in st2:
+        spec = spectrogram(tr)
+        spec /= np.max(spec)
+
+        specs.append(spec)
+
+    return specs
+
+
+class EventClassifier1D(EventClassifier):
+    def __init__(self, n_classes: int, in_channels: int = 1,
+                 base_filters: int = 16, kernel_size: int = 7,
+                 stride: int = 3, groups: int = 1, n_block: int = 8,
+                 learning_rate=1e-3, gpu: bool = True):
+
+        if gpu:
+            device = torch.device("cuda:0" if
+                                  torch.cuda.is_available() else "cpu")
+            if device == "cpu":
+                logger.warning('GPU is not available, the CPU will be used')
+            else:
+                logger.info('GPU will be used')
+        else:
+            device = 'cpu'
+            logger.info('The CPU will be used')
+
+        self.device = device
+
+        self.model = ResNet1D(in_channels, base_filters, kernel_size,
+                              stride, groups, n_block,
+                              n_classes).to(self.device)
+
+        # self.model = Conv1DModel()
+
+        self.in_channels = in_channels
+        self.base_filters = base_filters
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.n_classes = n_classes
+        self.groups = groups
+        self.n_block = n_block
+        self.gpu = gpu
+
+        self.model = ResNet1D(in_channels, base_filters, kernel_size,
+                              stride, groups, n_block,
+                              n_classes).to(self.device)
+
+        self.optimizer = torch.optim.Adam(self.model.parameters(),
+                                          lr=learning_rate)
+        # self.optimizer = torch.optim.SGD(self.model.parameters(),
+        #                                  lr=learning_rate)
+        self.criterion = nn.CrossEntropyLoss()
+
+        self.display_memory()
+        self.losses = []
+
+        self.validation_predictions = None
+        self.validation_targets = None
+
+    def train(self, dataset: ClassifierDataset1D, batch_size: int):
+
+        training_loader = DataLoader(dataset, batch_size=batch_size,
+                                     shuffle=True)
+
+        for inputs, targets in tqdm(training_loader):
+            inputs = inputs.view(inputs.size()[0], -1, inputs.size()[1])
+            self.iterate(inputs, targets)
+            torch.cuda.empty_cache()
+
+    def iterate(self, inputs, targets):
+
+        self.optimizer.zero_grad()
+
+        inputs = inputs.to(self.device)
+        targets = targets.to(self.device)
+
+        predictions = self.model(inputs)
+
+        # loss = self.criterion(predictions, targets.view(len(targets), -1))
+        loss = self.criterion(predictions, targets)
+        # print(loss.item())
+        loss.backward()
+        self.optimizer.step()
+
+        # print(loss.item())
+        self.losses.append(loss.cpu().item())
+
+    def validate(self, dataset: ClassifierDataset1D, batch_size: int):
+        self.model.eval()
+        training_loader = DataLoader(dataset, batch_size=batch_size,
+                                     shuffle=True)
+        self.validation_targets = np.zeros(len(dataset))
+        self.validation_predictions = np.zeros(len(dataset))
+        accuracy = 0
+        for i, (inputs, targets) in enumerate(tqdm(training_loader)):
+            inputs = inputs.view(inputs.size()[0], -1, inputs.size()[1])
+            inputs = inputs.to(self.device)
+
+            start = batch_size * i
+            end = start + batch_size
+            self.validation_targets[start:end] = targets
+            targets = targets.to(self.device)
+
+            # with torch.no_grad() pytorch does not compute the gradient,
+            # the gradient takes a significant amount of memory on the gpu.
+            # using torch.no_grad() consequently allows significantly
+            # increasing the batch size
+            with torch.no_grad():
+                outputs = self.model(inputs)
+
+            self.validation_predictions[start:end] = outputs.max(dim=1)[1].cpu(
+            ).detach().numpy()
+
+            accuracy += self.measure_accuracy(targets, outputs)
+        self.model.train()
+        return accuracy.cpu().detach().numpy() / (i + 1)
+
+
+class Conv1DModel(nn.Module):
+    def __init__(self):
+        super(Conv1DModel, self).__init__()
+        self.conv_layers = nn.Sequential(
+            nn.Conv1d(1, 64, 15),
+            nn.ReLU(),
+            nn.Conv1d(64, 64, 15),
+            nn.ReLU(),
+            nn.Conv1d(64, 64, 15),
+            nn.ReLU(),
+            nn.Conv1d(64, 128, 15),
+            nn.ReLU(),
+            nn.Conv1d(128, 128, 15),
+            nn.ReLU(),
+            nn.Conv1d(128, 128, 15),
+            nn.ReLU()
+        )
+
+        self.dense_layers = nn.Sequential(
+            nn.Dropout(0.2),
+            nn.Linear(in_features=128 * 172, out_features=256),
+            nn.ReLU(),
+            nn.Linear(in_features=256, out_features=256),
+            nn.ReLU(),
+            nn.Linear(in_features=256, out_features=256),
+            nn.ReLU(),
+            nn.Linear(in_features=256, out_features=1))
+
+    def forward(self, X):
+        out = self.conv_layers(X)
+        out = out.view(out.size(0), -1)
+        out = self.dense_layers(out)
+        # input(out)
+        return out
 
 
 class Picker(EventClassifier):

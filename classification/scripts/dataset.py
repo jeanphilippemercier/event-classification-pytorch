@@ -67,7 +67,8 @@ def split_filename_label(file_list):
 
 
 class FileList(object):
-    def __init__(self, path, unused_category=['unknown'], seed=None):
+    def __init__(self, path, unused_category=['unknown'], seed=None,
+                 extension='.jpg'):
 
         self.path = Path(path)
         dir_list = self.path.glob('*')
@@ -85,7 +86,7 @@ class FileList(object):
 
             self.cat_file_list[category] = [fle for fle in
                                             (self.path /
-                                             category).glob('*.jpg')]
+                                             category).glob(f'*.{extension}')]
 
         self.classes = self.category_list
 
@@ -94,6 +95,10 @@ class FileList(object):
                                                  max_number_image_per_category
                                                  =number)
 
+    def select1d(self, number):
+        return ClassifierDataset1D.from_file_list(self,
+                max_number_signal_per_category=number)
+
 
 class SpectrogramDataset(Dataset):
 
@@ -101,7 +106,7 @@ class SpectrogramDataset(Dataset):
                  max_number_image_per_category: int = 1e5,
                  seed: int = None):
 
-        categories = np.sort([key for key in file_dict.keys()])
+        categories = [key for key in file_dict.keys()]
         self.category_list = categories
         self.labels = np.arange(len(categories))
 
@@ -215,6 +220,93 @@ def spectrogram(trace: Trace):
     spec_db = (spec_db - spec_db.min()).numpy()
     # spec_db = (spec_db / spec_db.max()).type(torch.float32)
     return spec_db
+
+
+class ClassifierDataset1D(Dataset):
+
+    def __init__(self, file_dict: dict,
+                 max_number_signal_per_category: int = 1e5,
+                 seed: int = None):
+
+        categories = [key for key in file_dict.keys()]
+        self.category_list = categories
+        self.labels = np.arange(len(categories))
+
+        np.random.seed(seed)
+        self.labels_dict = {}
+        self.file_list = []
+        self.label_list = []
+        for category, label in zip(categories, self.labels):
+            self.labels_dict[category] = label
+            nb_files = int(max_number_signal_per_category)
+            if len(file_dict[category]) < nb_files:
+                nb_files = int(len(file_dict[category]))
+            for f in np.random.choice(file_dict[category],
+                                      size=nb_files,
+                                      replace=False):
+                self.file_list.append(f)
+                self.label_list.append(label)
+
+        self.file_list = np.array(self.file_list)
+        self.label_list = np.array(self.label_list)
+
+    @classmethod
+    def from_file_list(cls, file_list: FileList,
+                       max_number_signal_per_category=1e5, seed=None):
+        return cls(file_list.cat_file_list,
+                   max_number_signal_per_category=
+                   max_number_signal_per_category,
+                   seed=seed)
+
+    def __len__(self):
+        return len(self.file_list)
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        with open(self.file_list[idx], 'rb') as f_in:
+            data_dict = pickle.load(f_in)
+
+        # label = self.df_data.iloc[idx]['label']
+        # category = self.category_list[idx]
+        label = self.label_list[idx]
+
+        data = data_dict['data']
+
+        if idx != 0:
+            data_out = np.zeros(self.shape[1])
+            sample_diff = len(data) - self.shape[1]
+            if sample_diff > 0:
+                data_out = data[0:self.shape[1]]
+            else:
+                data_out[0: len(data)] = data
+        else:
+            data_out = data
+
+        data_out -= np.mean(data_out)
+        data_out /= np.max(data_out)
+
+        data_out = torch.from_numpy((np.array(data_out).astype(np.float32)))
+
+        return data_out, label
+
+    @property
+    def shape(self):
+        len_data = len(self[0][0])
+        return len(self.label_list), len_data
+
+    @property
+    def categories(self):
+        return self.labels_dict
+
+    @property
+    def classes(self):
+        return self.categories
+
+    @property
+    def nb_categories(self):
+        return len(self.category_list)
 
 
 class PickingDataset(Dataset):

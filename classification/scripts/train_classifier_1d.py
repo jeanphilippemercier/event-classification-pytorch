@@ -15,18 +15,18 @@ from plotcm import plot_confusion_matrix
 import model
 reload(model)
 
-input_directory = '/data_1/classification_dataset_2/'
+input_directory = '/data_1/classification_dataset_1D/'
 suffix = ''
-extension = 'jpg'
+extension = 'pickle'
 
 # file_list = glob(os.path.join(input_directory, '*', f'*{suffix}.{extension}'))
 
 # training, test = spectrogram_dataset.split_dataset(input_directory, split=0.8,
 #                                                    seed=1)
 
-file_list = dataset.FileList(input_directory)
+file_list = dataset.FileList(input_directory, extension=extension)
 
-ec = model.EventClassifier(len(file_list.category_list))
+ec = model.EventClassifier1D(len(file_list.category_list))
 
 losses = []
 accuracies = []
@@ -34,8 +34,8 @@ accuracies = []
 batch_size = 1000
 for epoch in tqdm(range(0, 100)):
     logger.info('selecting data')
-    training_dataset = file_list.select(2e5)
-    test_dataset = file_list.select(1e4)
+    training_dataset = file_list.select1d(1e5)
+    test_dataset = file_list.select1d(1e4)
     ec.train(training_dataset, batch_size=batch_size)
     accuracy = ec.validate(test_dataset, batch_size=batch_size)
 
@@ -50,7 +50,7 @@ for epoch in tqdm(range(0, 100)):
 
     if epoch % 10 == 0:
         # ec.model.eval()
-        ec.save(f'classifier_model_{epoch + 1}_epoch.pickle')
+        ec.save(f'classifier_model_1d_{epoch + 1}_epoch.pickle')
 
     plt.figure(1)
     plt.clf()
