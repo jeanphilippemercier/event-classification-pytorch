@@ -1,4 +1,3 @@
-from loguru import logger
 from librosa.feature import melspectrogram
 from librosa import amplitude_to_db
 from loguru import logger

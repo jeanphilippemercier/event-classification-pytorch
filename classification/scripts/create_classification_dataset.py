@@ -122,7 +122,15 @@ def create_training_image(waveform_file):
     cat = read_events(waveform_file_path.with_suffix('.xml'))
     st = read(waveform_file_path)
 
-    event_time = cat[0].preferred_origin().time.timestamp
+    if cat[0].preferred_origin() is not None:
+        origin = cat[0].preferred_origin()
+    else:
+        origin = cat[0].origins[-1]
+
+    if origin.evaluation_mode == 'automatic':
+        return
+
+    event_time = origin.time.timestamp
 
     try:
         st = st.detrend('demean').detrend(
