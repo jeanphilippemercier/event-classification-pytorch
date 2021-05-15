@@ -17,13 +17,14 @@ base_url = 'https://sppwaveform.blob.core.windows.net/permanentdbfilesblob/'
 output_directory = Path('/data_2/ot-data-all')
 output_directory.mkdir(parents=True, exist_ok=True)
 
-# blob_list = [blob for blob in container_client.list_blobs('events')]
+blob_list = [blob for blob in container_client.list_blobs(name_starts_with=
+                                                          'events/')]
 #
 # pickle.dump(blob_list)
 
 # blob_list = pickle.load(open('blob_list.pickle', 'rb'))
 #
-# catalog_blobs = [blob.name for blob in blob_list if '.xml' in blob.name]
+catalog_blobs = [blob.name for blob in blob_list if '.xml' in blob.name]
 
 for blob in tqdm(container_client.list_blobs('events')):
     blob = blob.name
