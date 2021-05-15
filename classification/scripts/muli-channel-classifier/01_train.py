@@ -1,0 +1,3 @@
+from dataset import MultiChannelClassificationDataset
+
+dataset = MultiChannelClassificationDataset(n_active_event_category=500)

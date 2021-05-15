@@ -19,7 +19,7 @@ from loguru import logger
 from spectrograms import generate_spectrogram
 
 
-class EventDataset(Dataset):
+class MultiChannelClassificationDataset(Dataset):
     def __init__(self, n_active_event_category=1000, n_channels=30,
                  manual_only=True):
         df = pd.read_csv(settings.catalog_file)
@@ -77,21 +77,12 @@ class EventDataset(Dataset):
         indices = indices[:self.n_channels]
 
         specs = []
-        trs = [st[i] for i in indices]
+        trs = [st[i].copy() for i in indices]
         st2 = Stream(traces=trs)
 
-        specs = specs = np.array(specs)
+        specs = torch.from_numpy(np.array(generate_spectrogram(st2.copy())))
 
-        # label = self.df_data.iloc[idx]['label']
-        # category = self.category_list[idx]
-
-        label = self.label_list[idx]
-
-        image = torch.from_numpy((np.array(Image.open(
-            self.file_list[idx])) / 255).astype(np.float32))
-
-        # return {'data': image, 'label': label}
-        return image, label
+        return specs, self.classes[idx]
 
 
 
