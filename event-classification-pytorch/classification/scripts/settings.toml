@@ -1,0 +1,10 @@
+project.name = 'event_classification'
+project.network = 'OT'
+project.base_directory = '/data_2/projects/'
+
+grids.units = 'METER'
+grids.origin = [650200, 4766170, -500]
+grids.dimensions = [100, 101, 68]
+grids.spacing = [25, 25, 25]
+grids.location = 'grids'
+
